@@ -66,25 +66,33 @@ const QRGenerator = () => {
     setIsGenerating(true);
     const isDynamic = qrType === 'url';
     const finalTitle = title || `${qrType.toUpperCase()} QR Code`;
+    
     try {
       if (isDynamic) {
         const destinationUrl = rawContent;
         const newQrFromDb = await addQR({ content: rawContent, destinationUrl: destinationUrl, type: qrType, title: finalTitle });
         if (!newQrFromDb) throw new Error("Failed to save QR to the database.");
-        const trackingUrl = `${import.meta.env.VITE_TRACKING_FUNCTION_URL}/${newQrFromDb.id}`;
+        
+        // Use the Firebase Cloud Function URL for tracking
+        const trackingUrl = `https://us-central1-qr-code-4663c.cloudfunctions.net/track/${newQrFromDb.id}`;
         const dataUrl = await QRCode.toDataURL(trackingUrl, { width: 400, margin: 2 });
+        
         const qrDocRef = doc(db, "qrCodes", newQrFromDb.id);
         await updateDoc(qrDocRef, { qrCodeDataUrl: dataUrl });
         setGeneratedQR({ ...newQrFromDb, qrCodeDataUrl: dataUrl });
+        
+        toast.success('Trackable QR code generated successfully!');
       } else {
         const dataUrl = await QRCode.toDataURL(rawContent, { width: 400, margin: 2 });
         const newQrFromDb = await addQR({ content: rawContent, destinationUrl: '', type: qrType, title: finalTitle, qrCodeDataUrl: dataUrl });
         if (!newQrFromDb) throw new Error("Failed to save QR to the database.");
         setGeneratedQR(newQrFromDb);
+        
+        toast.success('QR code generated successfully!');
       }
     } catch (error) {
       console.error("Generation Error:", error);
-      toast.error('Failed to generate QR code. Check console for details.');
+      toast.error('Failed to generate QR code. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -370,6 +378,14 @@ const QRGenerator = () => {
                   <p className="text-sm text-muted-foreground mb-1">Content:</p>
                   <p className="text-sm font-mono break-all">{generatedQR.content}</p>
                 </div>
+
+                {generatedQR.type === 'url' && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Tracking URL:</strong> This QR code will redirect through our tracking system to count scans.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <Button onClick={downloadQR} variant="outline" size="sm" className="w-full">
