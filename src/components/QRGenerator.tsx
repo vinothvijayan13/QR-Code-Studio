@@ -13,6 +13,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useQR, QRData } from '@/contexts/QRContext';
 import { db } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const QRGenerator = () => {
   const { addQR } = useQR();
