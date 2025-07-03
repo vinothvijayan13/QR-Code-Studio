@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { toast } from 'sonner';
 import { db } from '@/firebase';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, Timestamp, query, orderBy, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, Timestamp, query, orderBy, getDocs, updateDoc, where } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 // 1. Define the shape of a single scan record from the subcollection
 export interface ScanData {
@@ -20,13 +21,14 @@ export interface QRData {
   scans: number;
   qrCodeDataUrl?: string;
   destinationUrl: string;
+  userId: string; // Added userId field
   scanHistory?: ScanData[];
 }
 
 // 3. Define the context type to include all functions
 interface QRContextType {
   qrCodes: QRData[];
-  addQR: (qrData: Omit<QRData, 'id' | 'createdAt' | 'scans' | 'scanHistory' | 'updatedAt'>) => Promise<QRData | null>;
+  addQR: (qrData: Omit<QRData, 'id' | 'createdAt' | 'scans' | 'scanHistory' | 'updatedAt' | 'userId'>) => Promise<QRData | null>;
   deleteQR: (qrId: string) => void;
   fetchScanHistory: (qrId: string) => Promise<ScanData[]>;
   updateQRDestination: (qrId: string, newDestinationUrl: string) => Promise<void>;
@@ -35,11 +37,22 @@ interface QRContextType {
 const QRContext = createContext<QRContextType | undefined>(undefined);
 
 export const QRProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [qrCodes, setQrCodes] = useState<QRData[]>([]);
 
-  // Real-time listener for the main QR code list.
+  // Real-time listener for the main QR code list filtered by user
   useEffect(() => {
-    const q = query(collection(db, 'qrCodes'), orderBy('createdAt', 'desc'));
+    if (!user) {
+      setQrCodes([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'qrCodes'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+    
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const codesFromDb: QRData[] = [];
       querySnapshot.forEach((doc) => {
@@ -51,13 +64,19 @@ export const QRProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to sync QR codes from the database.");
     });
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
-  const addQR = useCallback(async (qrData: Omit<QRData, 'id' | 'createdAt' | 'scans' | 'scanHistory' | 'updatedAt'>): Promise<QRData | null> => {
+  const addQR = useCallback(async (qrData: Omit<QRData, 'id' | 'createdAt' | 'scans' | 'scanHistory' | 'updatedAt' | 'userId'>): Promise<QRData | null> => {
+    if (!user) {
+      toast.error("You must be signed in to create QR codes.");
+      return null;
+    }
+
     try {
       const docData = {
         ...qrData,
         scans: 0,
+        userId: user.uid,
         createdAt: Timestamp.now(),
       };
       const docRef = await addDoc(collection(db, "qrCodes"), docData);
@@ -68,18 +87,22 @@ export const QRProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to save QR code.");
       return null;
     }
-  }, []);
+  }, [user]);
 
   const deleteQR = useCallback(async (qrId: string) => {
+    if (!user) {
+      toast.error("You must be signed in to delete QR codes.");
+      return;
+    }
+
     try {
-      // For full cleanup of subcollections, a Cloud Function is required.
       await deleteDoc(doc(db, "qrCodes", qrId));
       toast.success('QR code deleted!');
     } catch (e) {
       console.error("Error deleting document: ", e);
       toast.error("Failed to delete QR code.");
     }
-  }, []);
+  }, [user]);
 
   const fetchScanHistory = useCallback(async (qrId: string): Promise<ScanData[]> => {
     try {
@@ -99,8 +122,12 @@ export const QRProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
   
-  // NEW FUNCTION: Updates only the destination URL for a dynamic QR code
   const updateQRDestination = useCallback(async (qrId: string, newDestinationUrl: string): Promise<void> => {
+    if (!user) {
+      toast.error("You must be signed in to update QR codes.");
+      throw new Error("User not authenticated");
+    }
+
     if (!newDestinationUrl || !newDestinationUrl.startsWith('http')) {
       toast.error("Please provide a valid destination URL (e.g., https://example.com)");
       throw new Error("Invalid URL provided");
@@ -110,7 +137,7 @@ export const QRProvider = ({ children }: { children: ReactNode }) => {
       const qrDocRef = doc(db, 'qrCodes', qrId);
       await updateDoc(qrDocRef, {
         destinationUrl: newDestinationUrl,
-        content: newDestinationUrl, // Also update content for consistency
+        content: newDestinationUrl,
         updatedAt: Timestamp.now(),
       });
       toast.success("QR code destination updated successfully!");
@@ -119,7 +146,7 @@ export const QRProvider = ({ children }: { children: ReactNode }) => {
       toast.error("Failed to update destination. Please try again.");
       throw error;
     }
-  }, []);
+  }, [user]);
 
   const value = { qrCodes, addQR, deleteQR, fetchScanHistory, updateQRDestination };
 

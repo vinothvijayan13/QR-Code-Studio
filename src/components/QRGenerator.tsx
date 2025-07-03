@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Download, Copy, Eye, QrCode as QrCodeIcon } from 'lucide-react';
+import { Download, Copy, Eye, QrCode as QrCodeIcon, Smartphone, Mail, Phone, MessageSquare, Wifi, FileText } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -34,6 +34,15 @@ const QRGenerator = () => {
   const [wifiName, setWifiName] = useState('');
   const [wifiPassword, setWifiPassword] = useState('');
   const [wifiSecurity, setWifiSecurity] = useState('WPA');
+
+  const qrTypeOptions = [
+    { value: 'url', label: 'Website URL', icon: Smartphone, description: 'Trackable link with analytics' },
+    { value: 'text', label: 'Plain Text', icon: FileText, description: 'Simple text content' },
+    { value: 'email', label: 'Email', icon: Mail, description: 'Pre-filled email composition' },
+    { value: 'phone', label: 'Phone Number', icon: Phone, description: 'Direct phone call' },
+    { value: 'sms', label: 'SMS Message', icon: MessageSquare, description: 'Pre-filled text message' },
+    { value: 'wifi', label: 'WiFi Network', icon: Wifi, description: 'WiFi connection details' },
+  ];
 
   const generateQRContent = () => {
     switch (qrType) {
@@ -103,59 +112,235 @@ const QRGenerator = () => {
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setUrl('');
+    setEmail('');
+    setSubject('');
+    setMessage('');
+    setPhone('');
+    setContent('');
+    setWifiName('');
+    setWifiPassword('');
+    setGeneratedQR(null);
+  };
+
   const renderQRTypeFields = () => {
     switch (qrType) {
       case 'url':
-        return (<div><Label htmlFor="url">Website URL</Label><Input id="url" type="url" placeholder="https://example.com" value={url} onChange={(e) => setUrl(e.target.value)} /></div>);
+        return (
+          <div className="space-y-2">
+            <Label htmlFor="url">Website URL</Label>
+            <Input 
+              id="url" 
+              type="url" 
+              placeholder="https://example.com" 
+              value={url} 
+              onChange={(e) => setUrl(e.target.value)} 
+            />
+            <p className="text-xs text-muted-foreground">This will be trackable with analytics</p>
+          </div>
+        );
       case 'email':
-        return (<div className="space-y-4"><div><Label htmlFor="email">Email Address</Label><Input id="email" type="email" placeholder="contact@example.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div><div><Label htmlFor="subject">Subject (Optional)</Label><Input id="subject" placeholder="Email subject" value={subject} onChange={(e) => setSubject(e.target.value)} /></div><div><Label htmlFor="message">Message (Optional)</Label><Textarea id="message" placeholder="Email message" value={message} onChange={(e) => setMessage(e.target.value)} /></div></div>);
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="contact@example.com" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject (Optional)</Label>
+              <Input 
+                id="subject" 
+                placeholder="Email subject" 
+                value={subject} 
+                onChange={(e) => setSubject(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="message">Message (Optional)</Label>
+              <Textarea 
+                id="message" 
+                placeholder="Email message" 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                rows={3}
+              />
+            </div>
+          </div>
+        );
       case 'phone':
-        return (<div><Label htmlFor="phone">Phone Number</Label><Input id="phone" type="tel" placeholder="+1234567890" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>);
+        return (
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input 
+              id="phone" 
+              type="tel" 
+              placeholder="+1234567890" 
+              value={phone} 
+              onChange={(e) => setPhone(e.target.value)} 
+            />
+          </div>
+        );
       case 'sms':
-        return (<div className="space-y-4"><div><Label htmlFor="sms-phone">Phone Number</Label><Input id="sms-phone" type="tel" placeholder="+1234567890" value={phone} onChange={(e) => setPhone(e.target.value)} /></div><div><Label htmlFor="sms-message">Message (Optional)</Label><Textarea id="sms-message" placeholder="SMS message" value={message} onChange={(e) => setMessage(e.target.value)} /></div></div>);
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="sms-phone">Phone Number</Label>
+              <Input 
+                id="sms-phone" 
+                type="tel" 
+                placeholder="+1234567890" 
+                value={phone} 
+                onChange={(e) => setPhone(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sms-message">Message (Optional)</Label>
+              <Textarea 
+                id="sms-message" 
+                placeholder="SMS message" 
+                value={message} 
+                onChange={(e) => setMessage(e.target.value)} 
+                rows={3}
+              />
+            </div>
+          </div>
+        );
       case 'wifi':
-        return (<div className="space-y-4"><div><Label htmlFor="wifi-name">Network Name (SSID)</Label><Input id="wifi-name" placeholder="My WiFi Network" value={wifiName} onChange={(e) => setWifiName(e.target.value)} /></div><div><Label htmlFor="wifi-password">Password</Label><Input id="wifi-password" type="password" placeholder="WiFi password" value={wifiPassword} onChange={(e) => setWifiPassword(e.target.value)} /></div><div><Label htmlFor="wifi-security">Security Type</Label><Select value={wifiSecurity} onValueChange={setWifiSecurity}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="WPA">WPA/WPA2</SelectItem><SelectItem value="WEP">WEP</SelectItem><SelectItem value="nopass">No Password</SelectItem></SelectContent></Select></div></div>);
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="wifi-name">Network Name (SSID)</Label>
+              <Input 
+                id="wifi-name" 
+                placeholder="My WiFi Network" 
+                value={wifiName} 
+                onChange={(e) => setWifiName(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wifi-password">Password</Label>
+              <Input 
+                id="wifi-password" 
+                type="password" 
+                placeholder="WiFi password" 
+                value={wifiPassword} 
+                onChange={(e) => setWifiPassword(e.target.value)} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wifi-security">Security Type</Label>
+              <Select value={wifiSecurity} onValueChange={setWifiSecurity}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WPA">WPA/WPA2</SelectItem>
+                  <SelectItem value="WEP">WEP</SelectItem>
+                  <SelectItem value="nopass">No Password</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
       default:
-        return (<div><Label htmlFor="content">Text Content</Label><Textarea id="content" placeholder="Enter your text here..." value={content} onChange={(e) => setContent(e.target.value)} rows={3} /></div>);
+        return (
+          <div className="space-y-2">
+            <Label htmlFor="content">Text Content</Label>
+            <Textarea 
+              id="content" 
+              placeholder="Enter your text here..." 
+              value={content} 
+              onChange={(e) => setContent(e.target.value)} 
+              rows={4}
+            />
+          </div>
+        );
     }
   };
 
+  const selectedQRType = qrTypeOptions.find(option => option.value === qrType);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Form Card */}
-      <Card>
+      <Card className="h-fit">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><QrCodeIcon className="h-5 w-5" />Create QR Code</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <QrCodeIcon className="h-5 w-5" />
+            Create QR Code
+          </CardTitle>
           <CardDescription>Choose a type and fill in the details to generate your QR code</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="title">Title (Optional)</Label>
-            <Input id="title" placeholder="My QR Code" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input 
+              id="title" 
+              placeholder="My QR Code" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+            />
           </div>
-          <div>
+
+          <div className="space-y-3">
             <Label htmlFor="qr-type">QR Code Type</Label>
-            <Select value={qrType} onValueChange={setQrType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="url">Website URL (Trackable)</SelectItem>
-                <SelectItem value="text">Plain Text</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="phone">Phone Number</SelectItem>
-                <SelectItem value="sms">SMS Message</SelectItem>
-                <SelectItem value="wifi">WiFi Network</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {qrTypeOptions.map((option) => {
+                const Icon = option.icon;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setQrType(option.value)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border text-left transition-all hover:bg-accent/50",
+                      qrType === option.value ? "border-primary bg-primary/5" : "border-border"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{option.label}</div>
+                      <div className="text-xs text-muted-foreground truncate">{option.description}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {renderQRTypeFields()}
-          <Button onClick={generateQR} disabled={isGenerating} className="w-full" size="lg">
-            {isGenerating ? 'Generating...' : 'Generate QR Code'}
-          </Button>
+
+          {selectedQRType && (
+            <div className="space-y-4 p-4 bg-accent/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <selectedQRType.icon className="h-4 w-4 text-primary" />
+                <span className="font-medium">{selectedQRType.label}</span>
+                <Badge variant="outline" className="text-xs">{selectedQRType.description}</Badge>
+              </div>
+              {renderQRTypeFields()}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button onClick={generateQR} disabled={isGenerating} className="flex-1" size="lg">
+              {isGenerating ? 'Generating...' : 'Generate QR Code'}
+            </Button>
+            {generatedQR && (
+              <Button onClick={resetForm} variant="outline" size="lg">
+                Reset
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
       
       {/* Display Card */}
-      <Card>
+      <Card className="h-fit">
         <CardHeader>
           <CardTitle>Generated QR Code</CardTitle>
           <CardDescription>Your QR code will appear here</CardDescription>
@@ -164,34 +349,45 @@ const QRGenerator = () => {
           {generatedQR ? (
             <div className="space-y-6">
               <div className="flex justify-center">
-                <div className="p-4 bg-white rounded-lg shadow-sm border">
+                <div className="p-6 bg-white rounded-xl shadow-sm border">
                   <img src={generatedQR.qrCodeDataUrl} alt="Generated QR Code" className="w-64 h-64" />
                 </div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{generatedQR.title}</span>
-                  <Badge variant="secondary">{generatedQR.type.toUpperCase()}</Badge>
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <h3 className="font-semibold text-lg">{generatedQR.title}</h3>
+                  <div className="flex items-center justify-center gap-2">
+                    <Badge variant="secondary">{generatedQR.type.toUpperCase()}</Badge>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Eye className="h-3 w-3" />
+                      <span>{generatedQR.scans} scans</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Eye className="h-4 w-4" />
-                  <span>{generatedQR.scans} scans</span>
+                
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Content:</p>
+                  <p className="text-sm font-mono break-all">{generatedQR.content}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={downloadQR} variant="outline" size="sm">
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button onClick={downloadQR} variant="outline" size="sm" className="w-full">
                     <Download className="h-4 w-4 mr-2" />Download
                   </Button>
-                  <Button onClick={copyToClipboard} variant="outline" size="sm">
+                  <Button onClick={copyToClipboard} variant="outline" size="sm" className="w-full">
                     <Copy className="h-4 w-4 mr-2" />Copy
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              <div className="text-center">
-                <QrCodeIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p>Generate a QR code to see it here</p>
+            <div className="flex items-center justify-center h-80 text-muted-foreground">
+              <div className="text-center space-y-4">
+                <QrCodeIcon className="h-16 w-16 mx-auto opacity-50" />
+                <div>
+                  <p className="font-medium">Generate a QR code to see it here</p>
+                  <p className="text-sm">Choose a type and fill in the details above</p>
+                </div>
               </div>
             </div>
           )}
