@@ -79,9 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!userDoc.exists()) {
         const userData: UserProfile = {
           uid: user.uid,
-          email: user.email || undefined,
-          phoneNumber: user.phoneNumber || undefined,
-          displayName: user.displayName || additionalData.name || undefined,
           createdAt: Timestamp.now(),
           lastLoginAt: Timestamp.now(),
           isAdmin: user.email === 'vinothvijayan13@gmail.com',
@@ -89,8 +86,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           totalScans: 0,
           ...additionalData
         };
+
+        // Add optional fields only if they have valid values
+        if (user.email) {
+          userData.email = user.email;
+        }
+        if (user.phoneNumber) {
+          userData.phoneNumber = user.phoneNumber;
+        }
+        if (user.displayName) {
+          userData.displayName = user.displayName;
+        }
+        if (additionalData.name) {
+          userData.displayName = additionalData.name;
+        }
+
+        // Filter out any undefined values before sending to Firestore
+        const cleanUserData = Object.fromEntries(
+          Object.entries(userData).filter(([, value]) => value !== undefined)
+        );
         
-        await setDoc(userRef, userData);
+        await setDoc(userRef, cleanUserData);
         setUserProfile(userData);
       } else {
         // Update last login
