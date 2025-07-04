@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Function to check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to check if the user is an admin by checking their user profile document
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Allow authenticated users to read their own profile.
+      // Allow admin users to read (get and list) all user profiles.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Allow authenticated users to create their own profile.
+      allow create: if isAuthenticated();
+      // Allow users to update their own profile.
+      // Allow admin users to update any user profile.
+      allow update: if request.auth.uid == userId || isAdmin();
+      // Only allow admin users to delete user profiles.
+      allow delete: if isAdmin();
+    }
+
+    // Rules for the 'qrCodes' collection
+    match /qrCodes/{qrId} {
+      // Allow authenticated users to read their own QR codes.
+      // Allow admin users to read (get and list) all QR codes.
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      // Allow authenticated users to create QR codes.
+      allow create: if isAuthenticated();
+      // Allow QR code owners or admin users to update QR codes.
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      // Allow QR code owners or admin users to delete QR codes.
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+
+      // Rules for the 'scans' subcollection within each QR code
+      match /scans/{scanId} {
+        // Allow QR code owners or admin users to read scan history.
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/qrCodes/$(qrId)).data.userId == request.auth.uid || isAdmin());
+        // Write operations to this subcollection are handled by a Firebase Function, which runs with elevated privileges and bypasses these client-side rules.
+      }
+    }
+  }
+}
